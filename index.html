@@ -1,0 +1,2428 @@
+<!DOCTYPE html>
+<html lang="en" class="theme-dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PacketSim - Interactive Network Emulator</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            themeBg: 'var(--bg-primary)',
+            themePanel: 'var(--bg-secondary)',
+            themeCard: 'var(--bg-tertiary)',
+            themeText: 'var(--text-primary)',
+            themeMuted: 'var(--text-secondary)',
+            themeBorder: 'var(--border-color)',
+            themeAccent: 'var(--accent-color)',
+            themeAccentHover: 'var(--accent-hover)',
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          animation: {
+            'pulse-fast': 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            'dash': 'dash 20s linear infinite',
+          },
+          keyframes: {
+            dash: {
+              to: {
+                'stroke-dashoffset': '-1000',
+              },
+            },
+          },
+        },
+      },
+    }
+  </script>
+
+  <style>
+    /* Theme color variables */
+    :root, .theme-dark {
+      --bg-primary: #020617; /* slate-950 */
+      --bg-secondary: #0f172a; /* slate-900 */
+      --bg-tertiary: #1e293b; /* slate-800 */
+      --text-primary: #f8fafc; /* slate-50 */
+      --text-secondary: #94a3b8; /* slate-400 */
+      --border-color: rgba(51, 65, 85, 0.5); /* slate-700/50 */
+      --accent-color: #4f46e5; /* indigo-600 */
+      --accent-hover: #4338ca;
+      --grid-color: rgba(99, 102, 241, 0.15);
+      --glass-bg: rgba(15, 23, 42, 0.75);
+    }
+
+    .theme-light {
+      --bg-primary: #f8fafc; /* slate-50 */
+      --bg-secondary: #ffffff;
+      --bg-tertiary: #f1f5f9; /* slate-100 */
+      --text-primary: #0f172a; /* slate-900 */
+      --text-secondary: #475569; /* slate-600 */
+      --border-color: rgba(203, 213, 225, 0.8); /* slate-300 */
+      --accent-color: #4f46e5; /* indigo-600 */
+      --accent-hover: #4338ca;
+      --grid-color: rgba(99, 102, 241, 0.08);
+      --glass-bg: rgba(255, 255, 255, 0.8);
+    }
+
+    .theme-cyberpunk {
+      --bg-primary: #05050a;
+      --bg-secondary: #0d0e15;
+      --bg-tertiary: #1b1c26;
+      --text-primary: #00ffcc;
+      --text-secondary: #ff007f;
+      --border-color: rgba(255, 0, 127, 0.4);
+      --accent-color: #ff007f;
+      --accent-hover: #e0006c;
+      --grid-color: rgba(0, 255, 204, 0.12);
+      --glass-bg: rgba(13, 14, 21, 0.85);
+    }
+
+    .theme-forest {
+      --bg-primary: #0b130e;
+      --bg-secondary: #142219;
+      --bg-tertiary: #1f3527;
+      --text-primary: #ecfdf5; /* emerald-50 */
+      --text-secondary: #a7f3d0; /* emerald-200 */
+      --border-color: rgba(16, 185, 129, 0.3);
+      --accent-color: #10b981; /* emerald-600 */
+      --accent-hover: #059669;
+      --grid-color: rgba(16, 185, 129, 0.12);
+      --glass-bg: rgba(20, 34, 25, 0.85);
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: var(--bg-primary);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: var(--bg-tertiary);
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--border-color);
+    }
+
+    /* Grid overlay for Canvas */
+    .bg-grid {
+      background-size: 40px 40px;
+      background-image: 
+        radial-gradient(circle, var(--grid-color) 1.5px, transparent 1.5px);
+      background-color: var(--bg-primary);
+    }
+
+    /* Glassmorphism glass card */
+    .glass-panel {
+      background: var(--glass-bg);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border-color);
+    }
+  </style>
+
+  <!-- React, ReactDOM, Babel Standalone & Recharts dependencies -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/prop-types@15.8.1/prop-types.js"></script>
+  <script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="bg-themeBg text-themeText font-sans selection:bg-indigo-500/30 selection:text-indigo-200 antialiased overflow-hidden h-screen w-screen transition-colors duration-300">
+
+  <div id="root" class="h-full w-full"></div>
+
+  <!-- Babel Script Containing App Components -->
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useMemo } = React;
+    const { 
+      ResponsiveContainer, LineChart, Line, BarChart, Bar, 
+      XAxis, YAxis, CartesianGrid, Tooltip, Legend 
+    } = Recharts;
+
+    // --- CUSTOM SVG REACT ICONS FOR SLEEK DESIGN ---
+    const IconPC = ({ className = "w-6 h-6" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+      </svg>
+    );
+
+    const IconSwitch = ({ className = "w-6 h-6" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+        <rect x="2" y="5" width="20" height="14" rx="2" stroke="currentColor" strokeWidth={2} fill="none" />
+      </svg>
+    );
+
+    const IconRouter = ({ className = "w-6 h-6" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <circle cx="12" cy="12" r="9" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h8m-4-4v8m-4-4l2-2m2 2l-2 2m4-2l2-2m-2 2l2 2" />
+      </svg>
+    );
+
+    const IconServer = ({ className = "w-6 h-6" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <rect x="4" y="2" width="16" height="6" rx="1" />
+        <rect x="4" y="9" width="16" height="6" rx="1" />
+        <rect x="4" y="16" width="16" height="6" rx="1" />
+        <circle cx="7" cy="5" r="1" fill="currentColor" />
+        <circle cx="7" cy="12" r="1" fill="currentColor" />
+        <circle cx="7" cy="19" r="1" fill="currentColor" />
+        <path d="M17 5h1M17 12h1M17 19h1" strokeLinecap="round" />
+      </svg>
+    );
+
+    const IconCable = ({ className = "w-5 h-5" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+      </svg>
+    );
+
+    const IconTrash = ({ className = "w-5 h-5" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+      </svg>
+    );
+
+    const IconPlay = ({ className = "w-5 h-5" }) => (
+      <svg className={className} fill="currentColor" viewBox="0 0 20 20">
+        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+      </svg>
+    );
+
+    const IconPause = ({ className = "w-5 h-5" }) => (
+      <svg className={className} fill="currentColor" viewBox="0 0 20 20">
+        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+      </svg>
+    );
+
+    const IconArrowRight = ({ className = "w-5 h-5" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+      </svg>
+    );
+
+    const IconSave = ({ className = "w-5 h-5" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+      </svg>
+    );
+
+    const IconUpload = ({ className = "w-5 h-5" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+      </svg>
+    );
+
+    const IconInfo = ({ className = "w-5 h-5" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    );
+
+    // --- DIJKSTRA AND IP NETWORK UTILITIES ---
+    const ipToLong = (ip) => {
+      if (!ip || typeof ip !== 'string') return 0;
+      const parts = ip.split('.');
+      if (parts.length !== 4) return 0;
+      return parts.reduce((acc, octet) => (acc << 8) + parseInt(octet, 10), 0) >>> 0;
+    };
+
+    const maskToLong = (mask) => {
+      if (!mask) return 0xffffffff;
+      if (mask.includes('.')) {
+        return ipToLong(mask);
+      }
+      const cidr = parseInt(mask.replace('/', ''), 10);
+      if (isNaN(cidr) || cidr < 0 || cidr > 32) return 0xffffffff;
+      return (cidr === 0 ? 0 : 0xffffffff << (32 - cidr)) >>> 0;
+    };
+
+    const inSameSubnet = (ip1, ip2, mask) => {
+      const m = maskToLong(mask);
+      return (ipToLong(ip1) & m) === (ipToLong(ip2) & m);
+    };
+
+    const generateRandomMAC = () => {
+      const hex = '0123456789ABCDEF';
+      let mac = '52:54:00';
+      for (let i = 0; i < 3; i++) {
+        mac += ':' + hex[Math.floor(Math.random() * 16)] + hex[Math.floor(Math.random() * 16)];
+      }
+      return mac;
+    };
+
+    const calculateShortestPath = (devices, links, sourceId, destId, metric = 'hops') => {
+      const graph = {};
+      devices.forEach(d => {
+        graph[d.id] = [];
+      });
+
+      links.forEach(link => {
+        let weight = 1;
+        if (metric === 'latency') {
+          weight = link.delayMs;
+        } else if (metric === 'loss') {
+          const lossRate = link.lossRate / 100;
+          weight = lossRate >= 1 ? Infinity : -Math.log(1 - lossRate);
+        }
+
+        graph[link.fromId]?.push({ to: link.toId, weight, link });
+        graph[link.toId]?.push({ to: link.fromId, weight, link });
+      });
+
+      const distances = {};
+      const previous = {};
+      const queue = new Set();
+
+      devices.forEach(d => {
+        distances[d.id] = Infinity;
+        previous[d.id] = null;
+        queue.add(d.id);
+      });
+
+      distances[sourceId] = 0;
+
+      while (queue.size > 0) {
+        let minNode = null;
+        queue.forEach(nodeId => {
+          if (minNode === null || distances[nodeId] < distances[minNode]) {
+            minNode = nodeId;
+          }
+        });
+
+        if (minNode === null || distances[minNode] === Infinity) break;
+        if (minNode === destId) break;
+
+        queue.delete(minNode);
+
+        graph[minNode].forEach(neighbor => {
+          if (!queue.has(neighbor.to)) return;
+          const alt = distances[minNode] + neighbor.weight;
+          if (alt < distances[neighbor.to]) {
+            distances[neighbor.to] = alt;
+            previous[neighbor.to] = minNode;
+          }
+        });
+      }
+
+      const path = [];
+      let u = destId;
+      if (previous[u] !== null || u === sourceId) {
+        while (u !== null) {
+          path.unshift(u);
+          u = previous[u];
+        }
+      }
+
+      return path.length > 1 && path[0] === sourceId ? path : [];
+    };
+
+    // --- FUTURE-READY HYBRID DEVICE ABSTRACTION LAYER ---
+    class VirtualDeviceAdapter {
+      constructor(node, parent) {
+        this.node = node;
+        this.parent = parent;
+      }
+      async getStatus() {
+        return { status: "Active (Local Virtual)", details: `Host ${this.node.name} executing inside DOM emulator environment.` };
+      }
+      async configureInterface(ifName, ip, subnet) {
+        this.node.ip = ip;
+        this.node.subnet = subnet;
+        return `[LOCAL] Interface ${ifName} configured with IP ${ip}/${subnet} successfully.`;
+      }
+      async runPing(targetIp) {
+        const pingLog = [
+          `PING ${targetIp} (${targetIp}) 56(84) bytes of local virtual payload.`
+        ];
+        const success = ipToLong(targetIp) !== 0;
+        let rttTotal = 0;
+        for (let i = 1; i <= 4; i++) {
+          const latency = (1.2 + Math.random() * 2.5).toFixed(2);
+          rttTotal += parseFloat(latency);
+          pingLog.push(`64 bytes from ${targetIp}: icmp_seq=${i} ttl=64 time=${latency} ms`);
+        }
+        pingLog.push(
+          `--- ${targetIp} ping statistics ---`,
+          `4 packets transmitted, 4 received, 0% packet loss`,
+          `rtt min/avg/max = 1.20/${(rttTotal / 4).toFixed(2)}/3.70 ms`
+        );
+        return { success, rtt: rttTotal / 4, log: pingLog };
+      }
+      async getTelemetry() {
+        return { cpuLoad: Math.round(5 + Math.random() * 8), memoryMb: 124, packetsRx: 1402 };
+      }
+    }
+
+    class EmulatedLinuxAdapter {
+      constructor(node, parent) {
+        this.node = node;
+        this.parent = parent;
+      }
+      async getStatus() {
+        return { status: "Connected (Linux Container)", details: `Docker container ID lxc-${this.node.id} on bridge network.` };
+      }
+      async configureInterface(ifName, ip, subnet) {
+        this.node.ip = ip;
+        this.node.subnet = subnet;
+        return [
+          `root@lxc-${this.node.id}:~# ip address add ${ip}/${subnet} dev ${ifName}`,
+          `root@lxc-${this.node.id}:~# ip link set ${ifName} up`,
+          `[OK] eth0 parameters written to /etc/network/interfaces.`
+        ].join('\n');
+      }
+      async runPing(targetIp) {
+        const pingLog = [
+          `root@lxc-${this.node.id}:~# ping -c 4 ${targetIp}`,
+          `PING ${targetIp} (${targetIp}) 56(84) bytes of data.`
+        ];
+        let rttTotal = 0;
+        for (let i = 1; i <= 4; i++) {
+          const latency = (8.4 + Math.random() * 5.2).toFixed(2);
+          rttTotal += parseFloat(latency);
+          pingLog.push(`64 bytes from ${targetIp}: icmp_seq=${i} ttl=56 time=${latency} ms`);
+        }
+        pingLog.push(
+          `--- ${targetIp} ping statistics ---`,
+          `4 packets transmitted, 4 received, 0% packet loss, time 3004ms`,
+          `rtt min/avg/max/mdev = 8.40/${(rttTotal / 4).toFixed(2)}/13.60/1.24 ms`
+        );
+        return { success: true, rtt: rttTotal / 4, log: pingLog };
+      }
+      async getTelemetry() {
+        return { cpuLoad: Math.round(15 + Math.random() * 20), memoryMb: 512, packetsRx: 4569 };
+      }
+    }
+
+    class RealDeviceSSHAdapter {
+      constructor(node, parent) {
+        this.node = node;
+        this.parent = parent;
+      }
+      async getStatus() {
+        return { status: "Active (SSH Tunnel Opened)", details: `Connection active: admin@${this.node.ip || "192.168.1.1"}:22 over wireguard.` };
+      }
+      async configureInterface(ifName, ip, subnet) {
+        this.node.ip = ip;
+        this.node.subnet = subnet;
+        return [
+          `[SSH] Connecting to admin@${ip}...`,
+          `[SSH] Connected. Sending CLI parameters...`,
+          `admin@hardware-dev> configure terminal`,
+          `admin@hardware-dev(config)> interface ${ifName}`,
+          `admin@hardware-dev(config-if)> ip address ${ip} ${subnet}`,
+          `admin@hardware-dev(config-if)> no shutdown`,
+          `admin@hardware-dev(config-if)> commit`,
+          `[SSH] Remote configuration successfully saved on flash.`
+        ].join('\n');
+      }
+      async runPing(targetIp) {
+        const pingLog = [
+          `[SSH] Executing remote ping: ping ${targetIp} count 4`,
+          `Sending 4, 100-byte ICMP Echos to ${targetIp}, timeout is 2 seconds:`
+        ];
+        let rttTotal = 0;
+        for (let i = 1; i <= 4; i++) {
+          const latency = (12.5 + Math.random() * 8.4).toFixed(2);
+          rttTotal += parseFloat(latency);
+          pingLog.push(`Reply from ${targetIp}: bytes=100 sequence=${i} rtt=${latency} ms`);
+        }
+        pingLog.push(
+          `Success rate is 100 percent (4/4), round-trip min/avg/max = 12.5/${(rttTotal / 4).toFixed(2)}/20.9 ms`
+        );
+        return { success: true, rtt: rttTotal / 4, log: pingLog };
+      }
+      async getTelemetry() {
+        return { cpuLoad: Math.round(30 + Math.random() * 45), memoryMb: 1024, packetsRx: 89012 };
+      }
+    }
+
+    class MikroTikAdapter {
+      constructor(node, parent) {
+        this.node = node;
+        this.parent = parent;
+      }
+      async getStatus() {
+        return { status: "Ready (MikroTik RouterOS API)", details: `WinBox/API interface provisioned. RouterOS v7.14.` };
+      }
+      async configureInterface(ifName, ip, subnet) {
+        this.node.ip = ip;
+        this.node.subnet = subnet;
+        return [
+          `[ROS-API] /ip/address/add address=${ip}/24 interface=${ifName}`,
+          `[ROS-API] /ip/route/add dst-address=0.0.0.0/0 gateway=${this.node.gateway || "192.168.1.254"}`,
+          `[MikroTik] configuration applied dynamically. Route tables updated.`
+        ].join('\n');
+      }
+      async runPing(targetIp) {
+        const pingLog = [
+          `[MikroTik] /tool ping address=${targetIp} count=4`,
+          `  SEQ HOST                                     SIZE TTL TIME  STATUS`
+        ];
+        let rttTotal = 0;
+        for (let i = 0; i < 4; i++) {
+          const latency = Math.round(18 + Math.random() * 12);
+          rttTotal += latency;
+          pingLog.push(`    ${i} ${targetIp}                                56  64 ${latency}ms  echo reply`);
+        }
+        pingLog.push(
+          `    sent=4 received=4 packet-loss=0% min-rtt=18ms avg-rtt=${Math.round(rttTotal / 4)}ms max-rtt=30ms`
+        );
+        return { success: true, rtt: rttTotal / 4, log: pingLog };
+      }
+      async getTelemetry() {
+        return { cpuLoad: Math.round(2 + Math.random() * 5), memoryMb: 256, packetsRx: 120560 };
+      }
+    }
+
+    class OpenWrtAdapter {
+      constructor(node, parent) {
+        this.node = node;
+        this.parent = parent;
+      }
+      async getStatus() {
+        return { status: "Ready (OpenWrt UCI Bridge)", details: `UCI network configuration adapter. OpenWrt 23.05.` };
+      }
+      async configureInterface(ifName, ip, subnet) {
+        this.node.ip = ip;
+        this.node.subnet = subnet;
+        return [
+          `root@openwrt:~# uci set network.${ifName}.ipaddr='${ip}'`,
+          `root@openwrt:~# uci set network.${ifName}.netmask='${subnet}'`,
+          `root@openwrt:~# uci commit network`,
+          `root@openwrt:~# /etc/init.d/network restart`,
+          `[OpenWrt] network subsystem restarted successfully.`
+        ].join('\n');
+      }
+      async runPing(targetIp) {
+        const pingLog = [
+          `root@openwrt:~# ping -c 4 ${targetIp}`,
+          `PING ${targetIp} (${targetIp}): 56 data bytes`
+        ];
+        let rttTotal = 0;
+        for (let i = 1; i <= 4; i++) {
+          const latency = (6.2 + Math.random() * 4.5).toFixed(2);
+          rttTotal += parseFloat(latency);
+          pingLog.push(`56 bytes from ${targetIp}: seq=${i} ttl=64 time=${latency} ms`);
+        }
+        pingLog.push(
+          `--- ${targetIp} ping statistics ---`,
+          `4 packets transmitted, 4 packets received, 0% packet loss`,
+          `round-trip min/avg/max = 6.20/${(rttTotal / 4).toFixed(2)}/10.70 ms`
+        );
+        return { success: true, rtt: rttTotal / 4, log: pingLog };
+      }
+      async getTelemetry() {
+        return { cpuLoad: Math.round(8 + Math.random() * 12), memoryMb: 128, packetsRx: 8904 };
+      }
+    }
+
+
+    // --- TOPOLOGY PRESETS ---
+    const PRESETS = {
+      simpleLan: {
+        name: "Simple LAN (Switching)",
+        description: "Three PCs and one Web Server connected to a single Switch. Visualizes MAC Learning and Layer-2 Flooding.",
+        devices: [
+          { id: "sw1", name: "Switch-0", type: "switch", x: 400, y: 250, mac: "AA:BB:CC:00:00:01", macTable: {} },
+          { id: "pc1", name: "PC-A", type: "pc", x: 150, y: 120, mac: "52:54:00:11:11:11", ip: "192.168.1.10", subnet: "255.255.255.0", gateway: "192.168.1.254" },
+          { id: "pc2", name: "PC-B", type: "pc", x: 150, y: 380, mac: "52:54:00:22:22:22", ip: "192.168.1.20", subnet: "255.255.255.0", gateway: "192.168.1.254" },
+          { id: "srv1", name: "WebServer", type: "server", x: 650, y: 250, mac: "52:54:00:88:88:88", ip: "192.168.1.100", subnet: "255.255.255.0", gateway: "192.168.1.254" }
+        ],
+        links: [
+          { id: "l1", fromId: "pc1", toId: "sw1", bandwidthMbps: 100, delayMs: 5, lossRate: 0, jitter: 1 },
+          { id: "l2", fromId: "pc2", toId: "sw1", bandwidthMbps: 100, delayMs: 5, lossRate: 0, jitter: 1 },
+          { id: "l3", fromId: "srv1", toId: "sw1", bandwidthMbps: 1000, delayMs: 2, lossRate: 0, jitter: 0.5 }
+        ]
+      },
+      subnetRouting: {
+        name: "Subnet Routing (Router Gateway)",
+        description: "Two separate subnets (192.168.1.0/24 and 10.0.0.0/24) connected via a central Router. Visualizes Layer-3 gateway routing and L2 header re-encapsulation.",
+        devices: [
+          { 
+            id: "r1", 
+            name: "CoreRouter", 
+            type: "router", 
+            x: 400, 
+            y: 250, 
+            mac: "AA:BB:CC:99:99:99",
+            interfaces: [
+              { id: "int1", name: "eth0 (LAN-A)", ip: "192.168.1.254", subnet: "255.255.255.0" },
+              { id: "int2", name: "eth1 (LAN-B)", ip: "10.0.0.1", subnet: "255.255.255.0" }
+            ],
+            routingTable: [
+              { network: "192.168.1.0/24", nextHop: "Direct", interfaceId: "int1" },
+              { network: "10.0.0.0/24", nextHop: "Direct", interfaceId: "int2" }
+            ]
+          },
+          { id: "sw1", name: "Switch-A", type: "switch", x: 220, y: 250, mac: "AA:BB:CC:11:11:11", macTable: {} },
+          { id: "sw2", name: "Switch-B", type: "switch", x: 580, y: 250, mac: "AA:BB:CC:22:22:22", macTable: {} },
+          { id: "pc1", name: "PC-A1", type: "pc", x: 100, y: 150, mac: "52:54:00:AA:AA:AA", ip: "192.168.1.10", subnet: "255.255.255.0", gateway: "192.168.1.254" },
+          { id: "pc2", name: "PC-A2", type: "pc", x: 100, y: 350, mac: "52:54:00:BB:BB:BB", ip: "192.168.1.20", subnet: "255.255.255.0", gateway: "192.168.1.254" },
+          { id: "srv1", name: "Server-B1", type: "server", x: 700, y: 250, mac: "52:54:00:EE:EE:EE", ip: "10.0.0.100", subnet: "255.255.255.0", gateway: "10.0.0.1" }
+        ],
+        links: [
+          { id: "l1", fromId: "pc1", toId: "sw1", bandwidthMbps: 100, delayMs: 5, lossRate: 0, jitter: 1 },
+          { id: "l2", fromId: "pc2", toId: "sw1", bandwidthMbps: 100, delayMs: 5, lossRate: 0, jitter: 1 },
+          { id: "l3", fromId: "sw1", toId: "r1", bandwidthMbps: 100, delayMs: 10, lossRate: 1, jitter: 2 },
+          { id: "l4", fromId: "r1", toId: "sw2", bandwidthMbps: 100, delayMs: 10, lossRate: 1, jitter: 2 },
+          { id: "l5", fromId: "sw2", toId: "srv1", bandwidthMbps: 1000, delayMs: 2, lossRate: 0, jitter: 0.5 }
+        ]
+      },
+      redundantRing: {
+        name: "Redundant Ring (Dijkstra Solver)",
+        description: "Three Routers connected in a triangle ring. Break links or adjust latencies to observe Dijkstra recalculating routing paths dynamically based on Hops, Latency, or Loss.",
+        devices: [
+          { 
+            id: "r1", name: "Router-1", type: "router", x: 400, y: 120, mac: "52:54:00:D1:D1:D1",
+            interfaces: [
+              { id: "r1-i1", name: "eth0", ip: "10.1.1.1", subnet: "255.255.255.0" },
+              { id: "r1-i2", name: "eth1", ip: "10.3.3.1", subnet: "255.255.255.0" },
+              { id: "r1-i3", name: "lan0", ip: "192.168.1.254", subnet: "255.255.255.0" }
+            ],
+            routingTable: [
+              { network: "192.168.1.0/24", nextHop: "Direct", interfaceId: "r1-i3" },
+              { network: "10.1.1.0/24", nextHop: "Direct", interfaceId: "r1-i1" },
+              { network: "10.3.3.0/24", nextHop: "Direct", interfaceId: "r1-i2" },
+              { network: "192.168.2.0/24", nextHop: "10.1.1.2", interfaceId: "r1-i1" },
+              { network: "192.168.3.0/24", nextHop: "10.3.3.2", interfaceId: "r1-i2" }
+            ]
+          },
+          { 
+            id: "r2", name: "Router-2", type: "router", x: 220, y: 320, mac: "52:54:00:D2:D2:D2",
+            interfaces: [
+              { id: "r2-i1", name: "eth0", ip: "10.1.1.2", subnet: "255.255.255.0" },
+              { id: "r2-i2", name: "eth1", ip: "10.2.2.1", subnet: "255.255.255.0" },
+              { id: "r2-i3", name: "lan0", ip: "192.168.2.254", subnet: "255.255.255.0" }
+            ],
+            routingTable: [
+              { network: "192.168.2.0/24", nextHop: "Direct", interfaceId: "r2-i3" },
+              { network: "10.1.1.0/24", nextHop: "Direct", interfaceId: "r2-i1" },
+              { network: "10.2.2.0/24", nextHop: "Direct", interfaceId: "r2-i2" },
+              { network: "192.168.1.0/24", nextHop: "10.1.1.1", interfaceId: "r2-i1" },
+              { network: "192.168.3.0/24", nextHop: "10.2.2.2", interfaceId: "r2-i2" }
+            ]
+          },
+          { 
+            id: "r3", name: "Router-3", type: "router", x: 580, y: 320, mac: "52:54:00:D3:D3:D3",
+            interfaces: [
+              { id: "r3-i1", name: "eth0", ip: "10.3.3.2", subnet: "255.255.255.0" },
+              { id: "r3-i2", name: "eth1", ip: "10.2.2.2", subnet: "255.255.255.0" },
+              { id: "r3-i3", name: "lan0", ip: "192.168.3.254", subnet: "255.255.255.0" }
+            ],
+            routingTable: [
+              { network: "192.168.3.0/24", nextHop: "Direct", interfaceId: "r3-i3" },
+              { network: "10.3.3.0/24", nextHop: "Direct", interfaceId: "r3-i1" },
+              { network: "10.2.2.0/24", nextHop: "Direct", interfaceId: "r3-i2" },
+              { network: "192.168.1.0/24", nextHop: "10.3.3.1", interfaceId: "r3-i1" },
+              { network: "192.168.2.0/24", nextHop: "10.2.2.1", interfaceId: "r3-i2" }
+            ]
+          },
+          { id: "pc1", name: "PC-1", type: "pc", x: 400, y: 20, mac: "52:54:00:01:01:01", ip: "192.168.1.10", subnet: "255.255.255.0", gateway: "192.168.1.254" },
+          { id: "pc2", name: "PC-2", type: "pc", x: 100, y: 420, mac: "52:54:00:02:02:02", ip: "192.168.2.10", subnet: "255.255.255.0", gateway: "192.168.2.254" },
+          { id: "pc3", name: "PC-3", type: "pc", x: 700, y: 420, mac: "52:54:00:03:03:03", ip: "192.168.3.10", subnet: "255.255.255.0", gateway: "192.168.3.254" }
+        ],
+        links: [
+          { id: "lw1", fromId: "r1", toId: "r2", bandwidthMbps: 10, delayMs: 25, lossRate: 1, jitter: 3 },
+          { id: "lw2", fromId: "r2", toId: "r3", bandwidthMbps: 100, delayMs: 15, lossRate: 2, jitter: 2 },
+          { id: "lw3", fromId: "r1", toId: "r3", bandwidthMbps: 10, delayMs: 60, lossRate: 12, jitter: 8 },
+          { id: "ll1", fromId: "pc1", toId: "r1", bandwidthMbps: 100, delayMs: 2, lossRate: 0, jitter: 0.5 },
+          { id: "ll2", fromId: "pc2", toId: "r2", bandwidthMbps: 100, delayMs: 2, lossRate: 0, jitter: 0.5 },
+          { id: "ll3", fromId: "pc3", toId: "r3", bandwidthMbps: 100, delayMs: 2, lossRate: 0, jitter: 0.5 }
+        ]
+      }
+    };
+
+    // --- MAIN APP COMPONENT ---
+    function App() {
+      // --- TOPOLOGY STATE ---
+      const [devices, setDevices] = useState(PRESETS.subnetRouting.devices);
+      const [links, setLinks] = useState(PRESETS.subnetRouting.links);
+      const [selectedDevice, setSelectedDevice] = useState(null);
+      const [selectedLink, setSelectedLink] = useState(null);
+      
+      const [toolMode, setToolMode] = useState('select');
+      const [linkStartNode, setLinkStartNode] = useState(null);
+      const [snapToGrid, setSnapToGrid] = useState(true);
+
+      // --- THEME STATE ---
+      const [theme, setTheme] = useState(() => localStorage.getItem('packetsim-theme') || 'dark');
+
+      useEffect(() => {
+        document.documentElement.className = '';
+        document.documentElement.classList.add(`theme-${theme}`);
+        localStorage.setItem('packetsim-theme', theme);
+      }, [theme]);
+
+      // --- CANVAS PAN & ZOOM VIEWPORT STATE ---
+      const [pan, setPan] = useState({ x: 0, y: 0 });
+      const [zoom, setZoom] = useState(1.0);
+      const [isPanning, setIsPanning] = useState(false);
+      const [panStart, setPanStart] = useState({ x: 0, y: 0 });
+      const didPanRef = useRef(false);
+
+      // --- SIMULATION / PACKET PARAMETERS ---
+      const [simSrc, setSimSrc] = useState(PRESETS.subnetRouting.devices[3].id); // PC-A1
+      const [simDst, setSimDst] = useState(PRESETS.subnetRouting.devices[5].id); // Server-B1
+      const [simProtocol, setSimProtocol] = useState('ICMP');
+      const [simMetric, setSimMetric] = useState('hops');
+      const [packetSizeBytes, setPacketSizeBytes] = useState(64); // 64B standard ping payload
+
+      const [simPath, setSimPath] = useState([]);
+      const [simStep, setSimStep] = useState(0);
+      const [isSimRunning, setIsSimRunning] = useState(false);
+      const [simSpeed, setSimSpeed] = useState(1.5);
+      const [simLogs, setSimLogs] = useState([]);
+      const [simLogsDetails, setSimLogsDetails] = useState([]);
+      const [simProgress, setSimProgress] = useState(0);
+      const [packetStatus, setPacketStatus] = useState('idle');
+
+      // --- HYBRID INTERACTIVE CLI CONSOLE STATE ---
+      const [activeTab, setActiveTab] = useState('properties'); // 'properties' | 'hybrid' | 'telemetry'
+      const [adapterType, setAdapterType] = useState('virtual'); // 'virtual' | 'linux' | 'ssh' | 'mikrotik' | 'openwrt'
+      const [consoleLogs, setConsoleLogs] = useState([]);
+      const [consoleInput, setConsoleInput] = useState('');
+
+      const [telemetryHistory, setTelemetryHistory] = useState([
+        { run: 1, hops: 3, latency: 22, jitter: 4.5, loss: 2.0 },
+        { run: 2, hops: 3, latency: 20, jitter: 4.0, loss: 2.0 },
+        { run: 3, hops: 3, latency: 25, jitter: 4.8, loss: 2.0 }
+      ]);
+
+      const canvasRef = useRef(null);
+      const containerRef = useRef(null);
+      const terminalEndRef = useRef(null);
+      const [draggingNode, setDraggingNode] = useState(null);
+      const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+
+      // Instantiate dynamic CLI Class based on selected device and adapter type
+      const currentAdapter = useMemo(() => {
+        if (!selectedDevice) return null;
+        const classes = {
+          virtual: VirtualDeviceAdapter,
+          linux: EmulatedLinuxAdapter,
+          ssh: RealDeviceSSHAdapter,
+          mikrotik: MikroTikAdapter,
+          openwrt: OpenWrtAdapter
+        };
+        const AdapterClass = classes[adapterType] || VirtualDeviceAdapter;
+        return new AdapterClass(selectedDevice, { setDevices, setSelectedDevice });
+      }, [selectedDevice, adapterType]);
+
+      // Reset CLI console whenever device changes
+      useEffect(() => {
+        if (selectedDevice) {
+          const typeMap = {
+            pc: 'virtual',
+            server: 'virtual',
+            router: 'mikrotik',
+            switch: 'virtual'
+          };
+          setAdapterType(typeMap[selectedDevice.type] || 'virtual');
+          setConsoleLogs([
+            `=== HYBRID HARDWARE ADAPTER ABSTRACTION INTERFACE ===`,
+            `Device selected: ${selectedDevice.name} [Type: ${selectedDevice.type.toUpperCase()}]`,
+            `Type 'help' to check available commands inside this controller.`,
+            `======================================================`
+          ]);
+        }
+      }, [selectedDevice]);
+
+      // Scroll console to bottom
+      useEffect(() => {
+        terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, [consoleLogs]);
+
+      // Bind raw mouse wheel listener on canvas container to override passive default in Chrome
+      useEffect(() => {
+        const canvasEl = canvasRef.current;
+        if (!canvasEl) return;
+
+        const handleWheel = (e) => {
+          e.preventDefault();
+          const zoomFactor = 1.08;
+          let newZoom = zoom;
+          if (e.deltaY < 0) {
+            newZoom = Math.min(newZoom * zoomFactor, 2.5);
+          } else {
+            newZoom = Math.max(newZoom / zoomFactor, 0.4);
+          }
+          
+          const canvasRect = canvasEl.getBoundingClientRect();
+          const mouseX = e.clientX - canvasRect.left;
+          const mouseY = e.clientY - canvasRect.top;
+          
+          const nextPanX = mouseX - (mouseX - pan.x) * (newZoom / zoom);
+          const nextPanY = mouseY - (mouseY - pan.y) * (newZoom / zoom);
+          
+          setZoom(newZoom);
+          setPan({ x: nextPanX, y: nextPanY });
+        };
+
+        canvasEl.addEventListener('wheel', handleWheel, { passive: false });
+        return () => canvasEl.removeEventListener('wheel', handleWheel);
+      }, [zoom, pan]);
+
+      // Run Dijkstra routing
+      const currentShortestPath = useMemo(() => {
+        if (!simSrc || !simDst) return [];
+        return calculateShortestPath(devices, links, simSrc, simDst, simMetric);
+      }, [devices, links, simSrc, simDst, simMetric]);
+
+      // Calculate path metrics based on link metrics and payload sizes
+      const pathMetrics = useMemo(() => {
+        if (currentShortestPath.length <= 1) {
+          return { hops: 0, latency: 0, jitter: 0, loss: 0 };
+        }
+        let totalLatency = 0;
+        let totalJitter = 0;
+        let successProb = 1.0;
+
+        for (let i = 0; i < currentShortestPath.length - 1; i++) {
+          const from = currentShortestPath[i];
+          const to = currentShortestPath[i+1];
+          const link = links.find(l => 
+            (l.fromId === from && l.toId === to) || (l.fromId === to && l.toId === from)
+          );
+          if (link) {
+            // Propagation Delay
+            const propDelay = link.delayMs;
+            // Transmission Delay: sizeBytes * 8 / (bandwidthMbps * 10^6) * 1000
+            const transDelay = (packetSizeBytes * 8) / (link.bandwidthMbps * 1000000) * 1000;
+            // Processing Delay: constant 0.5ms per hop
+            const procDelay = 0.5;
+
+            totalLatency += propDelay + transDelay + procDelay;
+            totalJitter += link.jitter;
+            successProb *= (1 - link.lossRate / 100);
+          }
+        }
+        return {
+          hops: currentShortestPath.length - 1,
+          latency: parseFloat(totalLatency.toFixed(2)),
+          jitter: parseFloat(totalJitter.toFixed(2)),
+          loss: parseFloat(((1 - successProb) * 100).toFixed(2))
+        };
+      }, [currentShortestPath, links, packetSizeBytes]);
+
+      // Load presets
+      const handleLoadPreset = (presetKey) => {
+        const preset = PRESETS[presetKey];
+        if (!preset) return;
+        setDevices(JSON.parse(JSON.stringify(preset.devices)));
+        setLinks(JSON.parse(JSON.stringify(preset.links)));
+        setSelectedDevice(null);
+        setSelectedLink(null);
+        setPan({ x: 0, y: 0 });
+        setZoom(1.0);
+        
+        const pcs = preset.devices.filter(d => d.type === 'pc' || d.type === 'server');
+        if (pcs.length >= 2) {
+          setSimSrc(pcs[0].id);
+          setSimDst(pcs[pcs.length - 1].id);
+        }
+        resetSimulation();
+      };
+
+      // Reset Simulation State
+      const resetSimulation = () => {
+        setIsSimRunning(false);
+        setSimStep(0);
+        setSimProgress(0);
+        setSimPath([]);
+        setPacketStatus('idle');
+        setSimLogs([]);
+        setSimLogsDetails([]);
+      };
+
+      // --- MOUSE & VIEWPORT NAVIGATION MECHANICS ---
+      const handleCanvasMouseDown = (e) => {
+        // Only start panning in dedicated 'pan' tool mode
+        if (toolMode !== 'pan' || draggingNode) return;
+        setIsPanning(true);
+        didPanRef.current = false;
+        const clientX = e.clientX || e.touches?.[0]?.clientX;
+        const clientY = e.clientY || e.touches?.[0]?.clientY;
+        setPanStart({
+          x: clientX - pan.x,
+          y: clientY - pan.y
+        });
+      };
+
+      const handleMouseDown = (e, node) => {
+        if (toolMode !== 'select') return;
+        e.stopPropagation();
+        setSelectedDevice(node);
+        setSelectedLink(null);
+        setDraggingNode(node.id);
+        
+        const clientX = e.clientX || e.touches?.[0]?.clientX;
+        const clientY = e.clientY || e.touches?.[0]?.clientY;
+        const canvasRect = canvasRef.current.getBoundingClientRect();
+        
+        const logicalMouseX = (clientX - canvasRect.left - pan.x) / zoom;
+        const logicalMouseY = (clientY - canvasRect.top - pan.y) / zoom;
+        
+        setDragOffset({
+          x: logicalMouseX - node.x,
+          y: logicalMouseY - node.y
+        });
+      };
+
+      const handleMouseMove = (e) => {
+        const clientX = e.clientX || e.touches?.[0]?.clientX;
+        const clientY = e.clientY || e.touches?.[0]?.clientY;
+
+        if (isPanning) {
+          didPanRef.current = true;
+          setPan({
+            x: clientX - panStart.x,
+            y: clientY - panStart.y
+          });
+          return;
+        }
+
+        if (!draggingNode) return;
+        
+        const canvasRect = canvasRef.current.getBoundingClientRect();
+        const logicalMouseX = (clientX - canvasRect.left - pan.x) / zoom;
+        const logicalMouseY = (clientY - canvasRect.top - pan.y) / zoom;
+        
+        let newX = logicalMouseX - dragOffset.x;
+        let newY = logicalMouseY - dragOffset.y;
+
+        if (snapToGrid) {
+          newX = Math.round(newX / 20) * 20;
+          newY = Math.round(newY / 20) * 20;
+        }
+
+        setDevices(prev => prev.map(d => d.id === draggingNode ? { ...d, x: newX, y: newY } : d));
+      };
+
+      const handleMouseUp = () => {
+        setIsPanning(false);
+        setDraggingNode(null);
+      };
+
+      // --- WORKSPACE CLICKS AND NODE CONNECTORS ---
+      const handleCanvasClick = (e) => {
+        if (draggingNode) return;
+        // If user was panning, don't treat mouseup as a click
+        if (toolMode === 'pan' && didPanRef.current) return;
+        const canvasRect = canvasRef.current.getBoundingClientRect();
+        
+        const clientX = e.clientX || e.touches?.[0]?.clientX;
+        const clientY = e.clientY || e.touches?.[0]?.clientY;
+        
+        // Logical layout translation based on zoom/pan scaling
+        let x = (clientX - canvasRect.left - pan.x) / zoom;
+        let y = (clientY - canvasRect.top - pan.y) / zoom;
+
+        if (snapToGrid) {
+          x = Math.round(x / 20) * 20;
+          y = Math.round(y / 20) * 20;
+        }
+
+        if (toolMode === 'select') {
+          setSelectedDevice(null);
+          setSelectedLink(null);
+        } else if (['pc', 'switch', 'router', 'server'].includes(toolMode)) {
+          const id = toolMode + '_' + Math.random().toString(36).substr(2, 5);
+          const name = toolMode.toUpperCase() + '-' + devices.filter(d => d.type === toolMode).length;
+          const mac = generateRandomMAC();
+          
+          let newNode = { id, name, type: toolMode, x, y, mac };
+          
+          if (toolMode === 'pc' || toolMode === 'server') {
+            newNode.ip = `192.168.1.${10 + devices.filter(d => d.type === 'pc' || d.type === 'server').length}`;
+            newNode.subnet = "255.255.255.0";
+            newNode.gateway = "192.168.1.254";
+          } else if (toolMode === 'switch') {
+            newNode.macTable = {};
+          } else if (toolMode === 'router') {
+            newNode.interfaces = [
+              { id: 'int0', name: 'eth0 (LAN)', ip: '192.168.1.254', subnet: '255.255.255.0' }
+            ];
+            newNode.routingTable = [
+              { network: '192.168.1.0/24', nextHop: 'Direct', interfaceId: 'int0' }
+            ];
+          }
+
+          setDevices(prev => [...prev, newNode]);
+          setToolMode('select');
+        }
+      };
+
+      const handleNodeClick = (e, node) => {
+        e.stopPropagation();
+        if (toolMode === 'select') {
+          setSelectedDevice(node);
+          setSelectedLink(null);
+        } else if (toolMode === 'link') {
+          if (!linkStartNode) {
+            setLinkStartNode(node.id);
+          } else if (linkStartNode !== node.id) {
+            const exists = links.some(l => 
+              (l.fromId === linkStartNode && l.toId === node.id) || 
+              (l.fromId === node.id && l.toId === linkStartNode)
+            );
+            if (!exists) {
+              const linkId = 'l_' + Math.random().toString(36).substr(2, 5);
+              const newLink = { 
+                id: linkId, 
+                fromId: linkStartNode, 
+                toId: node.id, 
+                bandwidthMbps: 100, 
+                delayMs: 10, 
+                lossRate: 0, 
+                jitter: 1 
+              };
+
+              const updatedDevices = devices.map(d => {
+                if (d.type === 'router' && (d.id === linkStartNode || d.id === node.id)) {
+                  const currentInterfaceCount = d.interfaces?.length || 0;
+                  const intId = `int${currentInterfaceCount}`;
+                  const subnetNum = 10 + currentInterfaceCount;
+                  const newInt = {
+                    id: intId,
+                    name: `eth${currentInterfaceCount}`,
+                    ip: `10.${subnetNum}.${subnetNum}.1`,
+                    subnet: '255.255.255.0'
+                  };
+                  return {
+                    ...d,
+                    interfaces: [...(d.interfaces || []), newInt],
+                    routingTable: [...(d.routingTable || []), {
+                      network: `10.${subnetNum}.${subnetNum}.0/24`,
+                      nextHop: 'Direct',
+                      interfaceId: intId
+                    }]
+                  };
+                }
+                return d;
+              });
+
+              setDevices(updatedDevices);
+              setLinks(prev => [...prev, newLink]);
+            }
+            setLinkStartNode(null);
+            setToolMode('select');
+          }
+        }
+      };
+
+      const handleDeleteSelected = () => {
+        if (selectedDevice) {
+          setDevices(prev => prev.filter(d => d.id !== selectedDevice.id));
+          setLinks(prev => prev.filter(l => l.fromId !== selectedDevice.id && l.toId !== selectedDevice.id));
+          if (simSrc === selectedDevice.id) setSimSrc('');
+          if (simDst === selectedDevice.id) setSimDst('');
+          setSelectedDevice(null);
+          resetSimulation();
+        } else if (selectedLink) {
+          setLinks(prev => prev.filter(l => l.id !== selectedLink.id));
+          setSelectedLink(null);
+          resetSimulation();
+        }
+      };
+
+      // --- SIMULATION CONTROLLER FLOWS ---
+
+      const precomputeSimulationLogs = (path) => {
+        if (path.length <= 1) return { logs: ["No valid path found!"], details: [] };
+
+        const logs = [];
+        const details = [];
+
+        const srcNode = devices.find(d => d.id === path[0]);
+        const dstNode = devices.find(d => d.id === path[path.length - 1]);
+
+        logs.push(`[${srcNode.name}] Initiating ${simProtocol} Send to ${dstNode.name} (${dstNode.ip}) [Payload Size: ${packetSizeBytes} bytes]`);
+        
+        let currentL2 = { src: srcNode.mac, dst: '' };
+        let currentL3 = { src: srcNode.ip, dst: dstNode.ip, protocol: simProtocol };
+
+        const isLocal = inSameSubnet(srcNode.ip, dstNode.ip, srcNode.subnet);
+        
+        if (isLocal) {
+          logs.push(`[${srcNode.name}] Subnet Check: Destination ${dstNode.ip} matches local subnet. Direct L2 frame configured.`);
+          currentL2.dst = dstNode.mac;
+          details.push({
+            node: srcNode.name,
+            action: "Same Subnet Transmission",
+            desc: `Host maps destination IP locally. ARP lookup binds MAC directly.`,
+            l2: `Src MAC: ${currentL2.src} | Dst MAC: ${currentL2.dst}`,
+            l3: `Src IP: ${currentL3.src} | Dst IP: ${currentL3.dst} | Size: ${packetSizeBytes}B`
+          });
+        } else {
+          logs.push(`[${srcNode.name}] Subnet Check: Target IP ${dstNode.ip} is remote. Forwarding to default gateway (${srcNode.gateway}).`);
+          
+          const gatewayRouter = devices.find(d => {
+            if (d.type !== 'router') return false;
+            return d.interfaces?.some(int => int.ip === srcNode.gateway);
+          });
+
+          if (gatewayRouter) {
+            currentL2.dst = gatewayRouter.mac;
+            details.push({
+              node: srcNode.name,
+              action: "Remote Subnet Routing",
+              desc: `PC addresses outbound L2 Ethernet frame to gateway router MAC ${gatewayRouter.mac}.`,
+              l2: `Src MAC: ${currentL2.src} | Dst MAC: ${currentL2.dst} (Gateway)`,
+              l3: `Src IP: ${currentL3.src} | Dst IP: ${currentL3.dst}`
+            });
+          } else {
+            logs.push(`[${srcNode.name}] CRITICAL DROP: Gateway MAC resolution failed! Destination Host Unreachable.`);
+            details.push({
+              node: srcNode.name,
+              action: "Gateway ARP Timeout",
+              desc: `PC could not reach physical gateway matching IP ${srcNode.gateway}. Dropping frame.`,
+              l2: `Src MAC: ${currentL2.src} | Dst MAC: UNRESOLVED`,
+              l3: `Src IP: ${currentL3.src} | Dst IP: ${currentL3.dst}`
+            });
+            return { logs, details, dropIndex: 0 };
+          }
+        }
+
+        const currentMacTables = {};
+        devices.forEach(d => {
+          if (d.type === 'switch') {
+            currentMacTables[d.id] = { ...d.macTable };
+          }
+        });
+
+        for (let i = 1; i < path.length; i++) {
+          const prevId = path[i-1];
+          const currId = path[i];
+          const prevNode = devices.find(d => d.id === prevId);
+          const currNode = devices.find(d => d.id === currId);
+
+          logs.push(`[Link] Transmitting frame from ${prevNode.name} to ${currNode.name}...`);
+
+          if (currNode.type === 'switch') {
+            const table = currentMacTables[currNode.id] || {};
+            const learnedPort = prevNode.name;
+            table[currentL2.src] = learnedPort;
+            currentMacTables[currNode.id] = table;
+            
+            logs.push(`[${currNode.name}] MAC Learning: Associated source MAC ${currentL2.src} with interface ${learnedPort}.`);
+            
+            const destPort = table[currentL2.dst];
+            if (destPort) {
+              logs.push(`[${currNode.name}] Forwarding: Found Destination MAC ${currentL2.dst} on Interface Port ${destPort}.`);
+            } else {
+              logs.push(`[${currNode.name}] Flooding: Destination MAC ${currentL2.dst} is unknown. Flooding frame to all outbound ports.`);
+            }
+
+            details.push({
+              node: currNode.name,
+              action: "L2 Switching",
+              desc: `Switch reads source MAC to update address table, then checks destination MAC to forward or flood frame.`,
+              l2: `Src MAC: ${currentL2.src} | Dst MAC: ${currentL2.dst}`,
+              l3: `Src IP: ${currentL3.src} | Dst IP: ${currentL3.dst}`
+            });
+          }
+
+          else if (currNode.type === 'router') {
+            logs.push(`[${currNode.name}] Router L2 Decapsulation: Match interface MAC. Stripping Ethernet wrapper.`);
+            logs.push(`[${currNode.name}] Router L3 Route Lookup: Destination IP ${currentL3.dst}.`);
+
+            let matchingRoute = null;
+            if (currNode.routingTable) {
+              for (const route of currNode.routingTable) {
+                if (route.network === '0.0.0.0/0' || route.network === 'Default') {
+                  if (!matchingRoute) matchingRoute = route;
+                } else {
+                  const [netIp, netMask] = route.network.split('/');
+                  if (inSameSubnet(currentL3.dst, netIp, netMask)) {
+                    matchingRoute = route;
+                    break;
+                  }
+                }
+              }
+            }
+
+            if (matchingRoute) {
+              logs.push(`[${currNode.name}] Route Match: Forwarding route ${matchingRoute.network} via next-hop ${matchingRoute.nextHop}.`);
+              
+              currentL2.src = currNode.mac;
+
+              const nextNodeId = path[i+1];
+              const nextNode = devices.find(d => d.id === nextNodeId);
+              
+              if (nextNode) {
+                if (nextNode.type === 'router') {
+                  currentL2.dst = nextNode.mac;
+                } else if (nextNode.type === 'switch') {
+                  const nextRouterOrHost = devices.find(d => d.id === path[i+2]) || dstNode;
+                  currentL2.dst = nextRouterOrHost.mac;
+                } else {
+                  currentL2.dst = nextNode.mac;
+                }
+
+                logs.push(`[${currNode.name}] Router L2 Encapsulation: Rewrite L2 frame. New Src MAC: ${currentL2.src} | New Dst MAC: ${currentL2.dst}.`);
+
+                details.push({
+                  node: currNode.name,
+                  action: "L3 Decapsulation & Route Table Hit",
+                  desc: `Router strips incoming L2 headers, maps packet destination IP to routing table, and encapsulates a new L2 ethernet frame.`,
+                  l2: `Src MAC: ${currentL2.src} | Dst MAC: ${currentL2.dst}`,
+                  l3: `Src IP: ${currentL3.src} | Dst IP: ${currentL3.dst}`
+                });
+              }
+            } else {
+              logs.push(`[${currNode.name}] CRITICAL DROP: No route found in routing table! Sending ICMP Destination Net Unreachable.`);
+              details.push({
+                node: currNode.name,
+                action: "Routing Lookup Drop",
+                desc: `Router cannot locate route map for target IP ${currentL3.dst}. Dropping frame.`,
+                l2: `Src MAC: ${currentL2.src} | Dst MAC: DROPPED`,
+                l3: `Src IP: ${currentL3.src} | Dst IP: ${currentL3.dst}`
+              });
+              return { logs, details, dropIndex: i };
+            }
+          }
+
+          else if (currNode.id === dstNode.id) {
+            logs.push(`[${currNode.name}] Destination Reached! Verifying target IP matches local node.`);
+            logs.push(`[${currNode.name}] Payload decapsulated successfully: Received ${currentL3.protocol} Request!`);
+            
+            details.push({
+              node: currNode.name,
+              action: "Destination Delivery",
+              desc: `Destination node processes packet, validates L3 IP matches its own, and decapsulates payload.`,
+              l2: `Src MAC: ${currentL2.src} | Dst MAC: ${currentL2.dst}`,
+              l3: `Src IP: ${currentL3.src} | Dst IP: ${currentL3.dst} | Protocol: ${currentL3.protocol}`
+            });
+          }
+        }
+
+        return { logs, details, dropIndex: -1 };
+      };
+
+      const handleSendPacket = () => {
+        if (!simSrc || !simDst) return;
+        if (simSrc === simDst) {
+          alert("Source and Destination devices must be different!");
+          return;
+        }
+
+        resetSimulation();
+        
+        const path = currentShortestPath;
+        if (path.length === 0) {
+          setSimLogs(["ERROR: No physical path or links connect source and destination. Check your topology!"]);
+          setPacketStatus('dropped');
+          return;
+        }
+
+        setSimPath(path);
+        setSimStep(0);
+        setSimProgress(0);
+        setPacketStatus('transmitting');
+
+        const computed = precomputeSimulationLogs(path);
+        setSimLogs(computed.logs);
+        setSimLogsDetails(computed.details);
+        setIsSimRunning(true);
+      };
+
+      useEffect(() => {
+        let interval = null;
+        if (isSimRunning) {
+          interval = setInterval(() => {
+            setSimStep(prevStep => {
+              const nextStep = prevStep + 1;
+              const maxSteps = simPath.length - 1;
+
+              const fromId = simPath[prevStep];
+              const toId = simPath[nextStep];
+              const link = links.find(l => 
+                (l.fromId === fromId && l.toId === toId) || (l.fromId === toId && l.toId === fromId)
+              );
+
+              // Loss rate packet drop check
+              if (link && Math.random() * 100 < link.lossRate) {
+                setIsSimRunning(false);
+                setPacketStatus('dropped');
+                setSimLogs(prev => [...prev, `[CONGESTION LOSS] Packet dropped on link between ${devices.find(d => d.id === fromId).name} and ${devices.find(d => d.id === toId).name} due to ${link.lossRate}% link packet loss rate!`]);
+                return prevStep;
+              }
+
+              if (nextStep >= maxSteps) {
+                setIsSimRunning(false);
+                setPacketStatus('success');
+                
+                setTelemetryHistory(prev => [
+                  ...prev,
+                  {
+                    run: prev.length + 1,
+                    hops: pathMetrics.hops,
+                    latency: parseFloat((pathMetrics.latency + (Math.random() * pathMetrics.jitter)).toFixed(2)),
+                    jitter: pathMetrics.jitter,
+                    loss: pathMetrics.loss
+                  }
+                ]);
+                return maxSteps;
+              }
+
+              return nextStep;
+            });
+          }, 1000 / simSpeed);
+        }
+        return () => clearInterval(interval);
+      }, [isSimRunning, simPath, simSpeed, links, devices, pathMetrics]);
+
+      const activePacketCoords = useMemo(() => {
+        if (packetStatus === 'idle' || simPath.length === 0) return null;
+        
+        const currentId = simPath[simStep];
+        const nextId = simStep < simPath.length - 1 ? simPath[simStep + 1] : currentId;
+
+        const currNode = devices.find(d => d.id === currentId);
+        const nextNode = devices.find(d => d.id === nextId);
+
+        if (!currNode || !nextNode) return null;
+
+        return {
+          x: currNode.x + (nextNode.x - currNode.x) * simProgress,
+          y: currNode.y + (nextNode.y - currNode.y) * simProgress
+        };
+      }, [devices, simPath, simStep, simProgress, packetStatus]);
+
+      useEffect(() => {
+        if (!isSimRunning) {
+          setSimProgress(1);
+          return;
+        }
+        setSimProgress(0);
+        let start = null;
+        const duration = 1000 / simSpeed;
+
+        const animate = (timestamp) => {
+          if (!start) start = timestamp;
+          const elapsed = timestamp - start;
+          const prog = Math.min(elapsed / duration, 1);
+          setSimProgress(prog);
+          if (prog < 1 && isSimRunning) {
+            requestAnimationFrame(animate);
+          }
+        };
+
+        const frame = requestAnimationFrame(animate);
+        return () => cancelAnimationFrame(frame);
+      }, [simStep, isSimRunning, simSpeed]);
+
+      // --- HYBRID SHELL CLI COMMAND DISPATCHER ---
+      const handleConsoleSubmit = async (e) => {
+        e.preventDefault();
+        const input = consoleInput.trim();
+        if (!input) return;
+
+        setConsoleLogs(prev => [...prev, `guest@${selectedDevice.name}:~$ ${input}`]);
+        setConsoleInput('');
+
+        const args = input.split(' ');
+        const cmd = args[0].toLowerCase();
+
+        if (cmd === 'help') {
+          setConsoleLogs(prev => [
+            ...prev,
+            `Available Commands inside this adapter:`,
+            `  help                       - Show this available utility menu.`,
+            `  status                     - Read real-time remote adapter health status.`,
+            `  config <interface> <ip> <subnet> - Edit L3 adapter networking configuration.`,
+            `  ping <ip>                  - Run 4 ICMP diagnostic echo checks.`,
+            `  telemetry                  - Retrieve sysstat metrics dashboard readout.`
+          ]);
+        } else if (cmd === 'status') {
+          const res = await currentAdapter.getStatus();
+          setConsoleLogs(prev => [
+            ...prev,
+            `[STATUS] ${res.status}`,
+            `[DETAILS] ${res.details}`
+          ]);
+        } else if (cmd === 'config') {
+          if (args.length < 4) {
+            setConsoleLogs(prev => [...prev, `Error: Invalid syntax. Use: config <interface> <ip> <subnet>`]);
+            return;
+          }
+          const res = await currentAdapter.configureInterface(args[1], args[2], args[3]);
+          setConsoleLogs(prev => [...prev, res]);
+          
+          // Sync changes back to devices state!
+          setDevices(prev => prev.map(d => d.id === selectedDevice.id ? { ...d, ip: args[2], subnet: args[3] } : d));
+          setSelectedDevice(prev => ({ ...prev, ip: args[2], subnet: args[3] }));
+        } else if (cmd === 'ping') {
+          if (args.length < 2) {
+            setConsoleLogs(prev => [...prev, `Error: Missing target IP. Use: ping <ip>`]);
+            return;
+          }
+          const res = await currentAdapter.runPing(args[1]);
+          setConsoleLogs(prev => [...prev, ...res.log]);
+        } else if (cmd === 'telemetry') {
+          const res = await currentAdapter.getTelemetry();
+          setConsoleLogs(prev => [
+            ...prev,
+            `System Metrics Readout:`,
+            `  CPU Load        : [${'#'.repeat(Math.round(res.cpuLoad / 5))}${' '.repeat(20 - Math.round(res.cpuLoad / 5))}] ${res.cpuLoad}%`,
+            `  RAM Memory Alloc: ${res.memoryMb} MB`,
+            `  Interfaces RX   : ${res.packetsRx} total packets`
+          ]);
+        } else {
+          setConsoleLogs(prev => [...prev, `shell: command not found: ${cmd}. Type 'help' for instructions.`]);
+        }
+      };
+
+      // --- SAVE AND LOAD ---
+      const handleSaveJSON = () => {
+        const topology = { devices, links };
+        const blob = new Blob([JSON.stringify(topology, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = "topology-" + new Date().toISOString().slice(0,10) + ".json";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      };
+
+      const handleLoadJSON = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          try {
+            const parsed = JSON.parse(evt.target.result);
+            if (parsed.devices && parsed.links) {
+              setDevices(parsed.devices);
+              setLinks(parsed.links);
+              setSelectedDevice(null);
+              setSelectedLink(null);
+              resetSimulation();
+              setPan({ x: 0, y: 0 });
+              setZoom(1.0);
+              alert("Network Topology loaded successfully!");
+            } else {
+              alert("Invalid JSON format. Must contain devices and links arrays.");
+            }
+          } catch (err) {
+            alert("Error parsing JSON file!");
+          }
+        };
+        reader.readAsText(file);
+      };
+
+      return (
+        <div className="flex flex-col h-screen overflow-hidden bg-themeBg text-themeText">
+          
+          {/* --- TOP HEADER NAVIGATION --- */}
+          <header className="flex items-center justify-between px-6 py-4 glass-panel border-b border-themeBorder z-10">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-xl bg-themeAccent flex items-center justify-center shadow-lg shadow-themeAccent/20 ring-1 ring-themeAccent">
+                <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+              </div>
+              <div>
+                <h1 className="text-xl font-extrabold text-themeText tracking-wide flex items-center space-x-2">
+                  <span>PacketSim</span>
+                  <span className="text-xs bg-themeAccent/20 text-themeAccent border border-themeAccent/30 px-2 py-0.5 rounded-full font-semibold">Telecom-Ed v1.5</span>
+                </h1>
+                <p className="text-xs text-themeMuted">All-in-One Network Simulator</p>
+              </div>
+            </div>
+
+            {/* Theme, Presets and Global Save/Load */}
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <span className="text-xs text-themeMuted font-medium">Theme:</span>
+                <select 
+                  className="bg-themePanel border border-themeBorder rounded-lg px-3 py-1.5 text-xs text-themeAccent focus:outline-none focus:ring-1 focus:ring-themeAccent cursor-pointer font-semibold"
+                  value={theme}
+                  onChange={(e) => setTheme(e.target.value)}
+                >
+                  <option value="dark">Dark Slate</option>
+                  <option value="light">Modern Light</option>
+                  <option value="cyberpunk">Cyberpunk Neon</option>
+                  <option value="forest">Emerald Forest</option>
+                </select>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <span className="text-xs text-themeMuted font-medium">Presets:</span>
+                <select 
+                  className="bg-themePanel border border-themeBorder rounded-lg px-3 py-1.5 text-xs text-themeAccent focus:outline-none focus:ring-1 focus:ring-themeAccent cursor-pointer font-semibold"
+                  onChange={(e) => handleLoadPreset(e.target.value)}
+                  defaultValue="subnetRouting"
+                >
+                  <option value="simpleLan">1. Simple LAN (L2 Switching)</option>
+                  <option value="subnetRouting">2. Gateway Subnet Routing (L3)</option>
+                  <option value="redundantRing">3. Redundant Ring (Dijkstra Solver)</option>
+                </select>
+              </div>
+
+              <button 
+                onClick={() => setSnapToGrid(!snapToGrid)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition border ${
+                  snapToGrid 
+                    ? 'bg-themeAccent/10 border-themeAccent/30 text-themeAccent' 
+                    : 'bg-themePanel border-themeBorder text-themeMuted hover:text-themeText'
+                }`}
+              >
+                <span>Grid Snap</span>
+              </button>
+
+              <button 
+                onClick={handleSaveJSON} 
+                className="bg-themePanel hover:bg-themeCard border border-themeBorder text-themeAccent hover:text-themeText p-2 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition"
+                title="Save Topology to JSON"
+              >
+                <IconSave className="w-4 h-4" />
+                <span className="hidden sm:inline">Save</span>
+              </button>
+
+              <label 
+                className="bg-themePanel hover:bg-themeCard border border-themeBorder text-themeAccent hover:text-themeText p-2 rounded-lg text-xs font-semibold flex items-center space-x-1.5 cursor-pointer transition"
+                title="Load Topology from JSON"
+              >
+                <IconUpload className="w-4 h-4" />
+                <span className="hidden sm:inline">Load</span>
+                <input type="file" accept=".json" onChange={handleLoadJSON} className="hidden" />
+              </label>
+            </div>
+          </header>
+
+          {/* --- MAIN CONTENT LAYOUT --- */}
+          <div className="flex flex-1 overflow-hidden">
+            
+            {/* --- LEFT TOOLBAR PANEL --- */}
+            <aside className="w-64 glass-panel border-r border-themeBorder flex flex-col p-4 space-y-4 select-none overflow-y-auto">
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-themeMuted mb-2">Palette Tools</h3>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { id: 'select', label: 'Select', desc: 'Click to select / Drag nodes', icon: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" /></svg> },
+                    { id: 'pan', label: 'Pan Canvas', desc: 'Drag to move the canvas viewport', icon: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11" /></svg> },
+                    { id: 'link', label: 'Ethernet Cable', desc: 'Link two devices', icon: <IconCable className="w-5 h-5" /> },
+                    { id: 'pc', label: 'Add PC', desc: 'Click canvas to place', icon: <IconPC className="w-5 h-5 text-green-400" /> },
+                    { id: 'switch', label: 'Add Switch', desc: 'Click canvas to place', icon: <IconSwitch className="w-5 h-5 text-blue-400" /> },
+                    { id: 'router', label: 'Add Router', desc: 'Click canvas to place', icon: <IconRouter className="w-5 h-5 text-purple-400" /> },
+                    { id: 'server', label: 'Add Server', desc: 'Click canvas to place', icon: <IconServer className="w-5 h-5 text-amber-400" /> },
+                  ].map(tool => (
+                    <button
+                      key={tool.id}
+                      onClick={() => {
+                        setToolMode(tool.id);
+                        setLinkStartNode(null);
+                      }}
+                      className={`flex flex-col items-center justify-center p-3 rounded-xl border text-center transition ${
+                        toolMode === tool.id
+                          ? 'bg-themeAccent/20 border-themeAccent text-themeAccent shadow-md shadow-themeAccent/10'
+                          : 'bg-themePanel border-themeBorder text-themeMuted hover:bg-themeCard hover:text-themeText'
+                      }`}
+                      title={tool.desc}
+                    >
+                      {tool.icon}
+                      <span className="text-[10px] font-semibold mt-1.5">{tool.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Viewport Zoom Center Actions */}
+              <div className="border-t border-themeBorder/80 pt-3">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-themeMuted mb-2">Viewport Actions</h3>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => { setPan({ x: 0, y: 0 }); setZoom(1.0); }}
+                    className="flex-1 bg-themePanel hover:bg-themeCard border border-themeBorder text-themeText text-[10px] font-bold p-2 rounded-lg transition text-center"
+                  >
+                    Reset View (100%)
+                  </button>
+                  <div className="bg-themeBg border border-themeBorder rounded-lg px-3 py-2 text-[10px] font-mono text-themeAccent text-center font-bold flex items-center justify-center">
+                    {Math.round(zoom * 100)}%
+                  </div>
+                </div>
+              </div>
+
+              {/* Routing Engine Settings */}
+              <div className="border-t border-themeBorder/80 pt-3">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-themeMuted mb-2 flex items-center space-x-1.5">
+                  <svg className="w-4 h-4 text-themeAccent" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                  </svg>
+                  <span>Dijkstra Shortest Path</span>
+                </h3>
+                <div className="space-y-2.5 bg-themeBg/50 p-2.5 rounded-xl border border-themeBorder">
+                  {[
+                    { id: 'hops', label: 'Shortest Hops', desc: 'Find path with minimum nodes.' },
+                    { id: 'latency', label: 'Minimum Latency', desc: 'Route via lowest transmission delay link.' },
+                    { id: 'loss', label: 'Maximum Reliability', desc: 'Avoid links with packet loss drops.' },
+                  ].map(opt => (
+                    <label 
+                      key={opt.id} 
+                      className={`flex items-start space-x-2 p-2 rounded-lg cursor-pointer transition border ${
+                        simMetric === opt.id 
+                          ? 'bg-themePanel border-themeAccent/40 text-themeText' 
+                          : 'hover:bg-themePanel/50 border-transparent text-themeMuted'
+                      }`}
+                    >
+                      <input 
+                        type="radio" 
+                        name="metric" 
+                        value={opt.id} 
+                        checked={simMetric === opt.id}
+                        onChange={() => {
+                          setSimMetric(opt.id);
+                          resetSimulation();
+                        }}
+                        className="mt-0.5 accent-themeAccent" 
+                      />
+                      <div>
+                        <div className="text-xs font-semibold">{opt.label}</div>
+                        <div className="text-[9px] leading-relaxed text-themeMuted">{opt.desc}</div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Instructions */}
+              <div className="border-t border-themeBorder/80 pt-3 flex-1 flex flex-col justify-end">
+                <div className="bg-themePanel/40 rounded-xl p-2.5 border border-themeBorder text-[9px] leading-relaxed text-themeMuted space-y-1.5">
+                  <div className="flex items-center space-x-1 font-bold text-themeAccent uppercase tracking-wide">
+                    <IconInfo className="w-3.5 h-3.5" />
+                    <span>Viewport Guide:</span>
+                  </div>
+                  <ul className="list-disc pl-3 space-y-0.5">
+                    <li><b>Add devices</b>: Select a device tool, click the canvas.</li>
+                    <li><b>Pan screen</b>: Use the Pan Canvas tool + drag.</li>
+                    <li><b>Zoom view</b>: Scroll your mouse wheel anywhere.</li>
+                    <li><b>SSH console</b>: Select device and open Hybrid tab.</li>
+                  </ul>
+                </div>
+              </div>
+            </aside>
+
+            {/* --- MAIN CENTRAL WORKSPACE CANVAS & SIMULATOR BOTTOM --- */}
+            <main className="flex-1 flex flex-col overflow-hidden relative">
+              
+              {/* TOPOLOGY CANVAS WITH VIEWPORT ZOOM TRANSFORM */}
+              <div 
+                ref={canvasRef}
+                onMouseDown={handleCanvasMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseUp}
+                onClick={handleCanvasClick}
+                className={`flex-1 bg-grid relative overflow-hidden select-none ${
+                  toolMode === 'pan' ? 'cursor-grab active:cursor-grabbing' 
+                  : toolMode === 'select' ? 'cursor-default' 
+                  : toolMode === 'link' ? 'cursor-crosshair'
+                  : 'cursor-copy'
+                }`}
+              >
+                {/* TRANSFORM CONTAINER ENCOMPASSING NODES AND SVGS */}
+                <div 
+                  ref={containerRef}
+                  style={{
+                    transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+                    transformOrigin: '0 0'
+                  }}
+                  className="absolute inset-0 pointer-events-none w-full h-full"
+                >
+                  <svg className="absolute inset-0 w-[5000px] h-[5000px] pointer-events-none z-0">
+                    <defs>
+                      <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                        <feGaussianBlur stdDeviation="3" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                      </filter>
+                    </defs>
+
+                    {/* Render cables */}
+                    {links.map(link => {
+                      const fromNode = devices.find(d => d.id === link.fromId);
+                      const toNode = devices.find(d => d.id === link.toId);
+                      if (!fromNode || !toNode) return null;
+
+                      let isPartOfDijkstra = false;
+                      let isPulsing = false;
+                      
+                      if (currentShortestPath.length > 1) {
+                        for (let i = 0; i < currentShortestPath.length - 1; i++) {
+                          if (
+                            (currentShortestPath[i] === link.fromId && currentShortestPath[i+1] === link.toId) ||
+                            (currentShortestPath[i] === link.toId && currentShortestPath[i+1] === link.fromId)
+                          ) {
+                            isPartOfDijkstra = true;
+                            if (packetStatus === 'transmitting' && (
+                              (simPath[simStep] === link.fromId && simPath[simStep+1] === link.toId) ||
+                              (simPath[simStep] === link.toId && simPath[simStep+1] === link.fromId)
+                            )) {
+                              isPulsing = true;
+                            }
+                          }
+                        }
+                      }
+
+                      const isSelected = selectedLink && selectedLink.id === link.id;
+
+                      return (
+                        <g key={link.id}>
+                          <line
+                            x1={fromNode.x}
+                            y1={fromNode.y}
+                            x2={toNode.x}
+                            y2={toNode.y}
+                            stroke="transparent"
+                            strokeWidth="24"
+                            className="cursor-pointer pointer-events-auto"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedLink(link);
+                              setSelectedDevice(null);
+                            }}
+                          />
+                          
+                          <line
+                            x1={fromNode.x}
+                            y1={fromNode.y}
+                            x2={toNode.x}
+                            y2={toNode.y}
+                            stroke={
+                              isSelected 
+                                ? '#ef4444' 
+                                : isPulsing 
+                                  ? '#4f46e5' 
+                                  : isPartOfDijkstra 
+                                    ? '#10b981' 
+                                    : link.lossRate > 10 
+                                      ? '#f59e0b' 
+                                      : '#334155' 
+                            }
+                            strokeWidth={isSelected ? '4' : isPartOfDijkstra ? '3' : '1.8'}
+                            strokeDasharray={link.lossRate > 0 ? "5, 5" : undefined}
+                            filter={isPulsing ? "url(#glow)" : undefined}
+                            className="transition-all duration-300"
+                          />
+
+                          {isPulsing && (
+                            <line
+                              x1={fromNode.x}
+                              y1={fromNode.y}
+                              x2={toNode.x}
+                              y2={toNode.y}
+                              stroke="#818cf8"
+                              strokeWidth="3.5"
+                              strokeDasharray="8, 12"
+                              className="animate-dash"
+                              style={{ strokeDashoffset: 100 }}
+                            />
+                          )}
+
+                          <g transform={`translate(${(fromNode.x + toNode.x)/2}, ${(fromNode.y + toNode.y)/2 - 8})`}>
+                            <rect x="-42" y="-9" width="84" height="18" rx="4" fill="var(--bg-secondary)" stroke="var(--border-color)" strokeWidth="1" opacity="0.85" />
+                            <text textAnchor="middle" fill="var(--text-secondary)" fontSize="8" fontWeight="bold" fontFamily="monospace">
+                              {link.bandwidthMbps}M / {link.delayMs}ms
+                            </text>
+                          </g>
+                        </g>
+                      );
+                    })}
+
+                    {toolMode === 'link' && linkStartNode && (() => {
+                      const startNode = devices.find(d => d.id === linkStartNode);
+                      if (!startNode) return null;
+                      return (
+                        <line
+                          x1={startNode.x}
+                          y1={startNode.y}
+                          x2={draggingNode ? devices.find(d => d.id === draggingNode).x : startNode.x}
+                          y2={draggingNode ? devices.find(d => d.id === draggingNode).y : startNode.y}
+                          stroke="#818cf8"
+                          strokeWidth="2"
+                          strokeDasharray="4,4"
+                          className="animate-pulse"
+                        />
+                      );
+                    })()}
+                  </svg>
+
+                  {/* Render Nodes */}
+                  {devices.map(node => {
+                    const isSelected = selectedDevice && selectedDevice.id === node.id;
+                    const isLinkStart = linkStartNode === node.id;
+                    const isSrc = simSrc === node.id;
+                    const isDst = simDst === node.id;
+
+                    let icon = <IconPC className="w-7 h-7" />;
+                    let nodeColor = 'from-green-500 to-green-600 border-green-400';
+                    if (node.type === 'switch') {
+                      icon = <IconSwitch className="w-7 h-7" />;
+                      nodeColor = 'from-blue-500 to-blue-600 border-blue-400';
+                    } else if (node.type === 'router') {
+                      icon = <IconRouter className="w-7 h-7" />;
+                      nodeColor = 'from-purple-500 to-purple-600 border-purple-400';
+                    } else if (node.type === 'server') {
+                      icon = <IconServer className="w-7 h-7" />;
+                      nodeColor = 'from-amber-500 to-amber-600 border-amber-400';
+                    }
+
+                    return (
+                      <div
+                        key={node.id}
+                        onMouseDown={(e) => handleMouseDown(e, node)}
+                        onTouchStart={(e) => handleMouseDown(e, node)}
+                        onClick={(e) => handleNodeClick(e, node)}
+                        style={{ left: node.x, top: node.y }}
+                        className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing z-10 pointer-events-auto select-none group"
+                      >
+                        {(isSrc || isDst) && (
+                          <div className={`absolute -inset-4 rounded-full opacity-40 animate-ping duration-1000 ${
+                            isSrc ? 'bg-green-500' : 'bg-amber-500'
+                          }`} />
+                        )}
+
+                        {toolMode === 'link' && (
+                          <div className="absolute -inset-2 bg-themeAccent/20 border border-themeAccent border-dashed rounded-xl animate-pulse z-20 pointer-events-none" />
+                        )}
+
+                        <div className={`flex flex-col items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br border-2 shadow-2xl relative transition duration-200 ${
+                          isSelected 
+                            ? 'border-themeAccent ring-4 ring-themeAccent/30 scale-105' 
+                            : isLinkStart 
+                              ? 'border-themeAccent ring-4 ring-themeAccent/20 animate-pulse'
+                              : 'border-themeBorder hover:border-themeAccent hover:scale-105'
+                        } ${nodeColor}`}>
+                          <div className="text-white drop-shadow-md">{icon}</div>
+                          {isSrc && (
+                            <span className="absolute -top-1.5 -right-1.5 bg-green-500 text-[8px] font-black text-slate-950 px-1 py-0.5 rounded-md border border-green-300">SRC</span>
+                          )}
+                          {isDst && (
+                            <span className="absolute -top-1.5 -right-1.5 bg-amber-500 text-[8px] font-black text-slate-950 px-1 py-0.5 rounded-md border border-amber-300">DST</span>
+                          )}
+                        </div>
+
+                        <div className="absolute top-16 left-1/2 transform -translate-x-1/2 text-center pointer-events-none min-w-[120px] bg-themeBg/85 backdrop-blur-sm border border-themeBorder rounded-lg py-1 px-2 mt-1">
+                          <div className="text-xs font-bold text-themeText leading-tight group-hover:text-themeAccent transition">{node.name}</div>
+                          {(node.type === 'pc' || node.type === 'server') && node.ip && (
+                            <div className="text-[9px] font-mono text-themeMuted leading-none mt-0.5">{node.ip}</div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* Packet Orb */}
+                  {activePacketCoords && (
+                    <div 
+                      style={{ left: activePacketCoords.x, top: activePacketCoords.y }}
+                      className={`absolute transform -translate-x-1/2 -translate-y-1/2 z-30 flex items-center justify-center w-8 h-8 rounded-full border-2 shadow-2xl transition duration-75 ${
+                        packetStatus === 'dropped'
+                          ? 'bg-red-500 border-red-300 shadow-red-500/40'
+                          : packetStatus === 'success'
+                            ? 'bg-green-500 border-green-300 shadow-green-500/40 animate-bounce'
+                            : 'bg-indigo-600 border-indigo-300 shadow-indigo-500/50 animate-pulse-fast'
+                      }`}
+                    >
+                      <span className="text-[8px] font-black text-white leading-none tracking-tight">
+                        {simProtocol}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* --- BOTTOM SIMULATION CONTROL PANEL --- */}
+              <div className="glass-panel border-t border-themeBorder p-4 z-10">
+                <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+                  
+                  <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] text-themeMuted font-bold uppercase tracking-wider mb-1">Source Node:</span>
+                      <select 
+                        value={simSrc}
+                        onChange={(e) => {
+                          setSimSrc(e.target.value);
+                          resetSimulation();
+                        }}
+                        className="bg-themePanel border border-themeBorder rounded-lg px-3 py-1.5 text-xs text-green-400 font-semibold focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500 cursor-pointer"
+                      >
+                        <option value="">-- Select Source --</option>
+                        {devices.filter(d => d.type === 'pc' || d.type === 'server').map(d => (
+                          <option key={d.id} value={d.id}>{d.name} ({d.ip})</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <IconArrowRight className="w-5 h-5 text-themeMuted mt-4 hidden sm:block" />
+
+                    <div className="flex flex-col">
+                      <span className="text-[10px] text-themeMuted font-bold uppercase tracking-wider mb-1">Destination:</span>
+                      <select 
+                        value={simDst}
+                        onChange={(e) => {
+                          setSimDst(e.target.value);
+                          resetSimulation();
+                        }}
+                        className="bg-themePanel border border-themeBorder rounded-lg px-3 py-1.5 text-xs text-amber-400 font-semibold focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 cursor-pointer"
+                      >
+                        <option value="">-- Select Target --</option>
+                        {devices.filter(d => d.type === 'pc' || d.type === 'server').map(d => (
+                          <option key={d.id} value={d.id}>{d.name} ({d.ip})</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="flex flex-col">
+                      <span className="text-[10px] text-themeMuted font-bold uppercase tracking-wider mb-1">Payload Size:</span>
+                      <select 
+                        value={packetSizeBytes}
+                        onChange={(e) => {
+                          setPacketSizeBytes(parseInt(e.target.value, 10));
+                          resetSimulation();
+                        }}
+                        className="bg-themePanel border border-themeBorder rounded-lg px-3 py-1.5 text-xs text-themeAccent font-semibold focus:outline-none focus:ring-1 focus:ring-themeAccent cursor-pointer"
+                      >
+                        <option value="64">64 B (Small Ping)</option>
+                        <option value="1500">1500 B (Standard MTU)</option>
+                        <option value="65535">65 KB (Max IPv4 Data)</option>
+                        <option value="1000000">1 MB (Large FTP File)</option>
+                      </select>
+                    </div>
+
+                    <div className="flex flex-col">
+                      <span className="text-[10px] text-themeMuted font-bold uppercase tracking-wider mb-1">Protocol:</span>
+                      <select 
+                        value={simProtocol}
+                        onChange={(e) => {
+                          setSimProtocol(e.target.value);
+                          resetSimulation();
+                        }}
+                        className="bg-themePanel border border-themeBorder rounded-lg px-3 py-1.5 text-xs text-themeAccent font-semibold focus:outline-none focus:ring-1 focus:ring-themeAccent cursor-pointer"
+                      >
+                        <option value="ICMP">ICMP Echo Request (Ping)</option>
+                        <option value="TCP">TCP Connection Handshake</option>
+                        <option value="HTTP">HTTP Web Request (GET)</option>
+                      </select>
+                    </div>
+
+                    <div className="flex items-end mt-4">
+                      {packetStatus === 'transmitting' || isSimRunning ? (
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => setIsSimRunning(!isSimRunning)}
+                            className="bg-themeAccent hover:bg-themeAccentHover text-white font-bold py-1.5 px-4 rounded-lg text-xs flex items-center space-x-1.5 transition"
+                          >
+                            {isSimRunning ? (
+                              <>
+                                <IconPause className="w-4 h-4" />
+                                <span>Pause</span>
+                              </>
+                            ) : (
+                              <>
+                                <IconPlay className="w-4 h-4" />
+                                <span>Play</span>
+                              </>
+                            )}
+                          </button>
+                          
+                          <button
+                            onClick={resetSimulation}
+                            className="bg-themeCard hover:bg-themePanel border border-themeBorder text-themeText font-bold py-1.5 px-3 rounded-lg text-xs transition"
+                          >
+                            Reset
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={handleSendPacket}
+                          disabled={!simSrc || !simDst}
+                          className="bg-themeAccent hover:bg-themeAccentHover disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold py-1.5 px-5 rounded-lg text-xs flex items-center space-x-1.5 transition shadow-lg shadow-themeAccent/30 ring-1 ring-themeAccent"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                          </svg>
+                          <span>Send Packet</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* High-Fidelity calculation values */}
+                  <div className="flex items-center space-x-4 border-l border-themeBorder/80 pl-4">
+                    <div className="text-center bg-themeBg/60 border border-themeBorder rounded-xl px-4 py-2">
+                      <div className="text-[9px] uppercase font-bold tracking-widest text-themeMuted">RTT Latency</div>
+                      <div className="text-sm font-extrabold text-themeAccent font-mono" title="Propagation + Transmission + Node Processing Delay">
+                        {pathMetrics.latency}ms
+                      </div>
+                    </div>
+                    <div className="text-center bg-themeBg/60 border border-themeBorder rounded-xl px-4 py-2">
+                      <div className="text-[9px] uppercase font-bold tracking-widest text-themeMuted">Hop Count</div>
+                      <div className="text-sm font-extrabold text-green-400 font-mono">{pathMetrics.hops} hops</div>
+                    </div>
+                    <div className="text-center bg-themeBg/60 border border-themeBorder rounded-xl px-4 py-2">
+                      <div className="text-[9px] uppercase font-bold tracking-widest text-themeMuted">Expected Loss</div>
+                      <div className={`text-sm font-extrabold font-mono ${pathMetrics.loss > 5 ? 'text-red-400 animate-pulse' : 'text-themeMuted'}`}>
+                        {pathMetrics.loss}%
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            </main>
+
+            {/* --- RIGHT DETAILED INSPECTOR & CONSOLE SIDEBAR --- */}
+            <aside className="w-80 glass-panel border-l border-themeBorder flex flex-col p-4 space-y-4 select-none overflow-y-auto">
+              
+              <div className="flex items-center justify-between border-b border-themeBorder pb-3">
+                <h2 className="text-sm font-bold text-themeText uppercase tracking-wider flex items-center space-x-1.5">
+                  <svg className="w-4.5 h-4.5 text-themeAccent" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                  </svg>
+                  <span>Inspector Panel</span>
+                </h2>
+                {(selectedDevice || selectedLink) && (
+                  <button
+                    onClick={handleDeleteSelected}
+                    className="p-1 text-themeMuted hover:text-red-400 rounded-lg hover:bg-themePanel transition"
+                    title="Delete element"
+                  >
+                    <IconTrash className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+
+              {/* TABS SELECTOR IF DEVICE IS SELECTED */}
+              {selectedDevice && (
+                <div className="flex bg-themeBg p-1 rounded-lg border border-themeBorder">
+                  <button 
+                    onClick={() => setActiveTab('properties')}
+                    className={`flex-1 text-[10px] font-bold py-1 px-2.5 rounded transition ${
+                      activeTab === 'properties' ? 'bg-themeAccent text-white' : 'text-themeMuted hover:text-themeText'
+                    }`}
+                  >
+                    Properties
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab('hybrid')}
+                    className={`flex-1 text-[10px] font-bold py-1 px-2.5 rounded transition ${
+                      activeTab === 'hybrid' ? 'bg-themeAccent text-white' : 'text-themeMuted hover:text-themeText'
+                    }`}
+                  >
+                    Hybrid CLI
+                  </button>
+                </div>
+              )}
+
+              {/* TAB 1: PROPERTIES INSPECTION */}
+              {selectedDevice && activeTab === 'properties' ? (
+                <div className="space-y-4">
+                  <div className="bg-themePanel/60 p-3 rounded-xl border border-themeBorder/80">
+                    <span className="text-[10px] text-themeMuted font-semibold font-mono block">Node ID: {selectedDevice.id}</span>
+                    
+                    <div className="space-y-3 mt-3">
+                      <div>
+                        <label className="text-[10px] text-themeMuted font-bold uppercase block mb-1">Host Name:</label>
+                        <input 
+                          type="text" 
+                          value={selectedDevice.name}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setDevices(prev => prev.map(d => d.id === selectedDevice.id ? { ...d, name: val } : d));
+                            setSelectedDevice(prev => ({ ...prev, name: val }));
+                          }}
+                          className="w-full bg-themeBg border border-themeBorder text-xs text-themeText rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-themeAccent font-semibold"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] text-themeMuted font-bold uppercase block mb-1">MAC Address:</label>
+                        <input 
+                          type="text" 
+                          value={selectedDevice.mac}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setDevices(prev => prev.map(d => d.id === selectedDevice.id ? { ...d, mac: val } : d));
+                            setSelectedDevice(prev => ({ ...prev, mac: val }));
+                          }}
+                          className="w-full bg-themeBg border border-themeBorder text-xs text-themeMuted rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-themeAccent font-mono"
+                        />
+                      </div>
+
+                      {(selectedDevice.type === 'pc' || selectedDevice.type === 'server') && (
+                        <>
+                          <div>
+                            <label className="text-[10px] text-themeMuted font-bold uppercase block mb-1">IP Address:</label>
+                            <input 
+                              type="text" 
+                              value={selectedDevice.ip || ''}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setDevices(prev => prev.map(d => d.id === selectedDevice.id ? { ...d, ip: val } : d));
+                                setSelectedDevice(prev => ({ ...prev, ip: val }));
+                              }}
+                              className="w-full bg-themeBg border border-themeBorder text-xs text-themeAccent rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-themeAccent font-mono font-semibold"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-[10px] text-themeMuted font-bold uppercase block mb-1">Subnet Mask:</label>
+                            <input 
+                              type="text" 
+                              value={selectedDevice.subnet || ''}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setDevices(prev => prev.map(d => d.id === selectedDevice.id ? { ...d, subnet: val } : d));
+                                setSelectedDevice(prev => ({ ...prev, subnet: val }));
+                              }}
+                              className="w-full bg-themeBg border border-themeBorder text-xs text-themeText rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-themeAccent font-mono"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-[10px] text-themeMuted font-bold uppercase block mb-1">Default Gateway:</label>
+                            <input 
+                              type="text" 
+                              value={selectedDevice.gateway || ''}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setDevices(prev => prev.map(d => d.id === selectedDevice.id ? { ...d, gateway: val } : d));
+                                setSelectedDevice(prev => ({ ...prev, gateway: val }));
+                              }}
+                              className="w-full bg-themeBg border border-themeBorder text-xs text-themeText rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-themeAccent font-mono"
+                            />
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {selectedDevice.type === 'switch' && (
+                    <div className="bg-themePanel/60 p-3 rounded-xl border border-themeBorder/80">
+                      <h4 className="text-[10px] font-bold uppercase tracking-wider text-themeMuted mb-2">MAC Cache Table</h4>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-[9px] font-mono text-left">
+                          <thead>
+                            <tr className="border-b border-themeBorder text-themeMuted">
+                              <th className="pb-1.5 font-bold uppercase">MAC Addr</th>
+                              <th className="pb-1.5 font-bold uppercase text-right">Switch Port</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {selectedDevice.macTable && Object.keys(selectedDevice.macTable).length > 0 ? (
+                              Object.entries(selectedDevice.macTable).map(([mac, port]) => (
+                                <tr key={mac} className="border-b border-themeBorder/55 hover:bg-themePanel/30">
+                                  <td className="py-1 text-themeText">{mac}</td>
+                                  <td className="py-1 text-themeAccent text-right">{port}</td>
+                                </tr>
+                              ))
+                            ) : (
+                              <tr>
+                                <td colSpan="2" className="py-2 text-themeMuted text-center italic">MAC Table is empty. Send a packet to trigger learning!</td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedDevice.type === 'router' && (
+                    <div className="space-y-3">
+                      <div className="bg-themePanel/60 p-3 rounded-xl border border-themeBorder/80">
+                        <h4 className="text-[10px] font-bold uppercase tracking-wider text-themeMuted mb-2">Network Interfaces</h4>
+                        <div className="space-y-3 max-h-[160px] overflow-y-auto pr-1">
+                          {selectedDevice.interfaces?.map((face, index) => (
+                            <div key={face.id} className="bg-themeBg p-2 rounded-lg border border-themeBorder text-[10px]">
+                              <div className="font-bold text-themeAccent mb-1.5">{face.name}</div>
+                              <div className="grid grid-cols-2 gap-1.5">
+                                <div>
+                                  <span className="text-[8px] text-themeMuted block uppercase">IP Address:</span>
+                                  <input 
+                                    type="text" 
+                                    value={face.ip}
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      const updatedInterfaces = [...selectedDevice.interfaces];
+                                      updatedInterfaces[index].ip = val;
+                                      setDevices(prev => prev.map(d => d.id === selectedDevice.id ? { ...d, interfaces: updatedInterfaces } : d));
+                                      setSelectedDevice(prev => ({ ...prev, interfaces: updatedInterfaces }));
+                                    }}
+                                    className="bg-transparent border border-themeBorder rounded font-mono text-[9px] w-full px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-themeAccent" 
+                                  />
+                                </div>
+                                <div>
+                                  <span className="text-[8px] text-themeMuted block uppercase">Subnet:</span>
+                                  <input 
+                                    type="text" 
+                                    value={face.subnet}
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      const updatedInterfaces = [...selectedDevice.interfaces];
+                                      updatedInterfaces[index].subnet = val;
+                                      setDevices(prev => prev.map(d => d.id === selectedDevice.id ? { ...d, interfaces: updatedInterfaces } : d));
+                                      setSelectedDevice(prev => ({ ...prev, interfaces: updatedInterfaces }));
+                                    }}
+                                    className="bg-transparent border border-themeBorder rounded font-mono text-[9px] w-full px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-themeAccent" 
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="bg-themePanel/60 p-3 rounded-xl border border-themeBorder/80">
+                        <h4 className="text-[10px] font-bold uppercase tracking-wider text-themeMuted mb-2">L3 IP Routing Table</h4>
+                        <div className="overflow-x-auto max-h-[140px] overflow-y-auto">
+                          <table className="w-full text-[9px] font-mono text-left">
+                            <thead>
+                              <tr className="border-b border-themeBorder text-themeMuted">
+                                <th className="pb-1 font-bold uppercase">Network</th>
+                                <th className="pb-1 font-bold uppercase">Next Hop</th>
+                                <th className="pb-1 font-bold uppercase text-right">Int</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {selectedDevice.routingTable?.map((route, idx) => (
+                                <tr key={idx} className="border-b border-themeBorder/55 hover:bg-themePanel/30">
+                                  <td className="py-1 text-themeText">{route.network}</td>
+                                  <td className="py-1 text-themeMuted">{route.nextHop}</td>
+                                  <td className="py-1 text-themeAccent text-right">{route.interfaceId}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : selectedDevice && activeTab === 'hybrid' ? (
+                /* TAB 2: HYBRID CLI CONTROLLER */
+                <div className="flex-1 flex flex-col space-y-3 overflow-hidden">
+                  
+                  {/* Select adapter wrapper interface */}
+                  <div>
+                    <label className="text-[10px] text-themeMuted font-bold uppercase block mb-1">Hybrid Device Adapter:</label>
+                    <select
+                      value={adapterType}
+                      onChange={(e) => setAdapterType(e.target.value)}
+                      className="w-full bg-themePanel border border-themeBorder rounded-lg px-2.5 py-1.5 text-xs text-themeAccent font-semibold focus:outline-none focus:ring-1 focus:ring-themeAccent cursor-pointer"
+                    >
+                      <option value="virtual">Virtual DOM Simulator Adapter</option>
+                      <option value="linux">Emulated Linux CLI Adapter</option>
+                      <option value="ssh">Real Device SSH Bridge Placeholder</option>
+                      <option value="mikrotik">MikroTik RouterOS (Mock API)</option>
+                      <option value="openwrt">OpenWrt UCI Bridge Placeholder</option>
+                    </select>
+                  </div>
+
+                  {/* Shell command console screen */}
+                  <div className="flex-1 flex flex-col bg-themeBg rounded-xl border border-themeBorder font-mono text-[9px] leading-relaxed overflow-hidden">
+                    <div className="bg-themePanel px-3 py-1.5 border-b border-themeBg text-themeMuted flex items-center justify-between">
+                      <span className="text-[8px] font-bold uppercase tracking-wider text-themeAccent">Interactive CLI Terminal</span>
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                    </div>
+
+                    <div className="flex-1 p-3 overflow-y-auto space-y-1.5 text-emerald-400 select-text">
+                      {consoleLogs.map((log, idx) => (
+                        <div key={idx} className="whitespace-pre-wrap">{log}</div>
+                      ))}
+                      <div ref={terminalEndRef} />
+                    </div>
+
+                    <form onSubmit={handleConsoleSubmit} className="flex border-t border-themeBorder bg-themeBg">
+                      <span className="pl-3 py-2 text-themeAccent select-none">guest$</span>
+                      <input
+                        type="text"
+                        value={consoleInput}
+                        onChange={(e) => setConsoleInput(e.target.value)}
+                        placeholder="Type 'help'..."
+                        className="flex-1 bg-transparent px-2 py-2 text-slate-100 focus:outline-none border-none font-mono"
+                      />
+                    </form>
+                  </div>
+
+                </div>
+              ) : selectedLink ? (
+                /* INSPECT LINK QUALITY PROPERTIES */
+                <div className="space-y-4">
+                  <div className="bg-themePanel/60 p-3 rounded-xl border border-themeBorder/80">
+                    <span className="text-[10px] text-themeMuted font-bold font-mono block">Link ID: {selectedLink.id}</span>
+                    
+                    <div className="space-y-4 mt-3">
+                      <div>
+                        <div className="flex justify-between text-[10px] text-themeMuted font-bold uppercase mb-1">
+                          <span>Bandwidth Speed:</span>
+                          <span className="text-themeAccent font-mono">{selectedLink.bandwidthMbps} Mbps</span>
+                        </div>
+                        <input 
+                          type="range" 
+                          min="1" 
+                          max="1000"
+                          step="10"
+                          value={selectedLink.bandwidthMbps}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value, 10);
+                            setLinks(prev => prev.map(l => l.id === selectedLink.id ? { ...l, bandwidthMbps: val } : l));
+                            setSelectedLink(prev => ({ ...prev, bandwidthMbps: val }));
+                          }}
+                          className="w-full accent-themeAccent bg-themeBg cursor-pointer h-1.5 rounded-lg"
+                        />
+                      </div>
+
+                      <div>
+                        <div className="flex justify-between text-[10px] text-themeMuted font-bold uppercase mb-1">
+                          <span>Propagation Delay:</span>
+                          <span className="text-themeAccent font-mono">{selectedLink.delayMs} ms</span>
+                        </div>
+                        <input 
+                          type="range" 
+                          min="1" 
+                          max="200"
+                          value={selectedLink.delayMs}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value, 10);
+                            setLinks(prev => prev.map(l => l.id === selectedLink.id ? { ...l, delayMs: val } : l));
+                            setSelectedLink(prev => ({ ...prev, delayMs: val }));
+                          }}
+                          className="w-full accent-themeAccent bg-themeBg cursor-pointer h-1.5 rounded-lg"
+                        />
+                      </div>
+
+                      <div>
+                        <div className="flex justify-between text-[10px] text-themeMuted font-bold uppercase mb-1">
+                          <span>Packet Loss Rate:</span>
+                          <span className="text-amber-400 font-mono">{selectedLink.lossRate} %</span>
+                        </div>
+                        <input 
+                          type="range" 
+                          min="0" 
+                          max="100"
+                          value={selectedLink.lossRate}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value, 10);
+                            setLinks(prev => prev.map(l => l.id === selectedLink.id ? { ...l, lossRate: val } : l));
+                            setSelectedLink(prev => ({ ...prev, lossRate: val }));
+                          }}
+                          className="w-full accent-amber-500 bg-themeBg cursor-pointer h-1.5 rounded-lg"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* TELEMETRY METRICS RENDER IN NO SELECTION */
+                <div className="flex-1 flex flex-col space-y-4">
+                  <div className="bg-themePanel/60 p-3 rounded-xl border border-themeBorder/80">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-themeMuted mb-2">Performance History Chart</h3>
+                    <div className="w-full h-36">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={telemetryHistory} margin={{ top: 5, right: 5, bottom: 5, left: -25 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
+                          <XAxis dataKey="run" stroke="var(--text-secondary)" fontSize={9} />
+                          <YAxis stroke="var(--text-secondary)" fontSize={9} />
+                          <Tooltip contentStyle={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', fontSize: 10 }} />
+                          <Line type="monotone" dataKey="latency" name="Latency (ms)" stroke="var(--accent-color)" strokeWidth={2} dot={{ r: 3 }} />
+                          <Line type="monotone" dataKey="loss" name="Loss (%)" stroke="#f59e0b" strokeWidth={1.5} dot={{ r: 2 }} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  <div className="bg-themePanel/60 p-3 rounded-xl border border-themeBorder/80 flex-1 flex flex-col">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-themeMuted mb-2">Optimal Metric Comparison</h3>
+                    <div className="w-full h-32 flex-1 min-h-[120px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart
+                          data={[
+                            { name: 'Hops', pathValue: pathMetrics.hops },
+                            { name: 'Latency', pathValue: pathMetrics.latency / 10 },
+                            { name: 'Loss', pathValue: pathMetrics.loss },
+                          ]}
+                          margin={{ top: 5, right: 5, bottom: 5, left: -25 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
+                          <XAxis dataKey="name" stroke="var(--text-secondary)" fontSize={9} />
+                          <YAxis stroke="var(--text-secondary)" fontSize={9} />
+                          <Tooltip contentStyle={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', fontSize: 10 }} />
+                          <Bar dataKey="pathValue" name="Current Value" fill="var(--accent-color)" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* --- DYNAMIC PACKET FORWARDING LOG TERMINAL --- */}
+              <div className="border-t border-themeBorder pt-3 flex flex-col flex-1 min-h-[200px] overflow-hidden">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-themeMuted mb-2 flex items-center space-x-1.5">
+                  <svg className="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <span>Step-by-Step Forwarding Logs</span>
+                </h3>
+                
+                <div className="flex-1 bg-themeBg rounded-xl p-3 border border-themeBorder font-mono text-[9px] leading-relaxed overflow-y-auto space-y-2 select-text">
+                  {simLogs.length > 0 ? (
+                    simLogs.map((log, idx) => {
+                      let color = 'text-themeText';
+                      if (log.includes('CRITICAL') || log.includes('ERROR') || log.includes('dropped') || log.includes('LOSS')) {
+                        color = 'text-red-400 font-bold';
+                      } else if (log.includes('Reached') || log.includes('successfully')) {
+                        color = 'text-emerald-400 font-bold';
+                      } else if (log.includes('MAC Learning') || log.includes('Route Match')) {
+                        color = 'text-themeAccent';
+                      } else if (log.includes('Transmitting')) {
+                        color = 'text-themeMuted';
+                      }
+
+                      const isActiveStep = simStep > 0 && Math.floor(simStep) === Math.floor(idx / 3);
+                      
+                      return (
+                        <div key={idx} className={`${color} ${isActiveStep ? 'bg-themePanel border-l border-themeAccent pl-1 py-0.5' : ''}`}>
+                          {log}
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="text-themeMuted italic text-center py-8">
+                      Simulation logs will be printed here during transmission. Select source & target hosts to begin.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+            </aside>
+
+          </div>
+        </div>
+      );
+    }
+
+    // Mount Application
+    const container = document.getElementById('root');
+    const root = ReactDOM.createRoot(container);
+    root.render(<App />);
+  </script>
+</body>
+</html>
